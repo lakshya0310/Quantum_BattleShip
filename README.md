@@ -9,7 +9,7 @@ List out the QFF-Registered email IDs of people in your team here:
 - lakshya.jindal@research.iiit.ac.in
 
 ## Your Solution:
-### ## Methodology and Reasoning
+### Methodology and Reasoning
 
 The core methodology of this solution is to adapt the **Elitzur-Vaidman (E-V) interaction-free measurement** concept to the game of Battleship. The reasoning is that a quantum approach can be significantly more efficient than a classical brute-force search.
 
@@ -19,7 +19,7 @@ The strategy consists of two main parts:
 
 2.  **The Scanning Strategy**: Instead of checking each grid square individually, the script probes entire columns and rows at once. If a probe of Column `C` indicates a ship, and a probe of Row `R` also indicates a ship, we can deduce the ship's location is at the intersection `(R, C)`. This reduces the number of required measurements for an $N \times N$ grid from $N^2$ to just $2N$.
 
-### ## Code Snippets
+### Code Snippets
 
 The core quantum logic is encapsulated in the `run_ev_probe` function, which builds and simulates the E-V circuit.
 
