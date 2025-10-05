@@ -4,7 +4,7 @@
 ## Instructions:
 Read the problem statement in `Battleship.docx` and `Battleship - PPT.pdf`. This is an open-ended challenge with no starter code or required submission format - solve it however you want! Document your solution, code, results, and any relevant files in this repository.
 
-## Your Team:
+## Your Team(Team name : Sheldon):
 List out the QFF-Registered email IDs of people in your team here:
 - lakshya.jindal@research.iiit.ac.in
 
