@@ -1,0 +1,76 @@
+{
+  "board": {
+    "rows": 4,
+    "cols": 4,
+    "ships": [
+      {
+        "name": "Destroyer",
+        "size": 2,
+        "coords": [
+          [
+            1,
+            2
+          ],
+          [
+            1,
+            3
+          ]
+        ]
+      }
+    ]
+  },
+  "quantum_simulation": {
+    "board_dimensions": [
+      4,
+      4
+    ],
+    "total_ships": 1,
+    "total_ship_segments": 2,
+    "true_ship_cells": [
+      [
+        1,
+        2
+      ],
+      [
+        1,
+        3
+      ]
+    ],
+    "confirmed_ships": [
+      [
+        1,
+        2
+      ],
+      [
+        1,
+        3
+      ]
+    ],
+    "correct_detections": 2,
+    "false_positives": 0,
+    "missed_ships": 0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "quantum_measurements": 8,
+    "classical_measurements": 16,
+    "measurement_reduction": 0.5,
+    "speedup_ratio": 2.0,
+    "total_quantum_shots": 32000,
+    "total_simulated_explosions": 3009,
+    "total_simulated_detections": 2222,
+    "theoretical_ev_score": 0.7500000000000001,
+    "empirical_ev_score": 0.7384513127284812,
+    "battleship_score_slide17": 0.37500000000000006,
+    "battleship_score_speedup": 1.5000000000000002,
+    "empirical_battleship_score": 1.4769026254569624
+  },
+  "classical_benchmark": {
+    "total_measurements": 8,
+    "max_measurements": 16,
+    "explosions": 2,
+    "interaction_free_detections": 0,
+    "ev_score": 0.0,
+    "ships_found": 2,
+    "total_ships": 2
+  }
+}

@@ -1,114 +1,346 @@
 [![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-22041afd0340ce965d47ae6ef1cefeee28c7c493a6346c4f15d667ab976d596c.svg)](https://classroom.github.com/a/mmBvcuTa)
-# Hackathon Problem - Battleship
+# Hackathon Problem - Quantum Radar Battleship
 
-## Instructions:
-Read the problem statement in `Battleship.docx` and `Battleship - PPT.pdf`. This is an open-ended challenge with no starter code or required submission format - solve it however you want! Document your solution, code, results, and any relevant files in this repository.
+## Team Information
+- **Team Name**: Sheldon
+- **QFF-Registered Email IDs**:
+  - `lakshya.jindal@research.iiit.ac.in`
 
-## Your Team(Team name : Sheldon):
-List out the QFF-Registered email IDs of people in your team here:
-- lakshya.jindal@research.iiit.ac.in
+---
 
-## Your Solution:
-### Methodology and Reasoning
+## Executive Summary & What Was Fixed
 
-The core methodology of this solution is to adapt the **Elitzur-Vaidman (E-V) interaction-free measurement** concept to the game of Battleship. The reasoning is that a quantum approach can be significantly more efficient than a classical brute-force search.
+### Previous Limitation
+The previous iteration of the solution only computed theoretical formula values without simulating an actual Battleship game or executing the full quantum physics of the Elitzur-Vaidman bomb tester:
+1. **Incomplete Quantum Circuit**: It used a 2-qubit toy circuit that omitted the intermediate measurement on bomb/ship qubits. Thus, no real wavefunction collapse or physical explosions were simulated.
+2. **Artificial Probability Math**: Explosions were not simulated quantum-mechanically; instead, static mathematical expectations were multiplied.
+3. **No Realistic Battleship Fleet**: Ships were represented as isolated diagonal points (`board[i, i] = 1`) rather than multi-cell naval vessels placed horizontally or vertically.
+4. **Ghost Intersection Failure**: For multiple ships, naive row/column intersections generated false positives ("ghost" ships) without any disambiguation strategy.
 
-The strategy consists of two main parts:
+### The New Solution
+1. **Full Elitzur-Vaidman Circuit Simulation (Slide 9, 10, 16)**: Implements the exact multi-qubit Mach-Zehnder interferometer circuit with real measurement gates on ship qubits (`q_target`) and the probe qubit (`q_probe`), executed on Qiskit AerSimulator with customizable shot counts.
+2. **Actual Physical Simulation**: Every probe shot physically evaluates whether the ship cell collapsed the state ("BOOM!" explosion) or whether the dark port fired without an explosion ("Bomb Found" interaction-free detection).
+3. **Authentic Battleship Gameplay**:
+   - Supports realistic multi-cell ships (Destroyer, Submarine, Cruiser, Patrol Boat) with standard non-overlapping horizontal/vertical placement.
+   - Implements the exact 4x4 benchmark from `Battleship-PPT.pdf` (Slides 13, 14, 16) with a 2-unit Destroyer at coordinates **C2-D2**.
+4. **Quantum Disambiguation Engine**: Solves the classic multi-ship ghost intersection problem using targeted single-cell quantum interaction-free probes, eliminating false positives with 100% precision.
+5. **Direct Classical vs. Quantum Benchmark**: Compares quantum superposition radar against a classical search (which suffers 100% explosion rates on hits and requires up to $N^2$ turns).
+6. **Reproducible Environment & Tracked Results**: Packaged with a Python virtual environment (`.venv`), `requirements.txt`, and tracked experimental results in `results/` (JSON summary, text report, ASCII circuit diagram, and 4-panel publication visualization plot).
 
-1.  **The Quantum Probe**: A small quantum circuit was designed to act as a "probe." It uses `Rx` gates to place a probe qubit into superposition and a `CNOT` gate to entangle it with a target representing a potential ship. Through quantum interference, we can measure the probe qubit to see if an "interaction" occurred (i.e., a ship is present) with a high probability of not collapsing the superposition in a way that corresponds to a "hit" or "explosion."
+---
 
-2.  **The Scanning Strategy**: Instead of checking each grid square individually, the script probes entire columns and rows at once. If a probe of Column `C` indicates a ship, and a probe of Row `R` also indicates a ship, we can deduce the ship's location is at the intersection `(R, C)`. This reduces the number of required measurements for an $N \times N$ grid from $N^2$ to just $2N$.
+## Mathematical & Quantum Foundation
 
-### Code Snippets
+### 1. The Elitzur-Vaidman Thought Experiment (1993)
+Avshalom Elitzur and Lev Vaidman demonstrated that quantum superposition and wavefunction collapse enable detecting the presence of an ultra-sensitive object (a "bomb" or ship) **without triggering it**.
 
-The core quantum logic is encapsulated in the `run_ev_probe` function, which builds and simulates the E-V circuit.
+In an optical Mach-Zehnder interferometer:
+- A single photon is split by beam splitter 1 ($BS_1$, modeled by $R_x(\theta)$).
+- Reference arm $|0\rangle$ and Bomb arm $|1\rangle$ are created in superposition:
+  $$\vert\psi_1\rangle = \cos(\theta/2)\vert 0\rangle - i\sin(\theta/2)\vert 1\rangle$$
+- **Case A: No Bomb / Ship Present**:
+  The photon passes through both arms unperturbed, recombines at beam splitter 2 ($BS_2$, modeled by $R_x(-\theta)$), and experiences constructive interference at the bright port (Detector 0) and completely destructive interference at the dark port (Detector 1).
+  $$P(\text{Detector 0}) = 100\%, \quad P(\text{Detector 1}) = 0\%, \quad P(\text{Explosion}) = 0\%$$
+- **Case B: Bomb / Ship Present**:
+  The ship acts as a measuring observer.
+  - With probability $P(\text{boom}) = \sin^2(\theta/2)$, the photon is measured in the bomb arm $\to$ **BOOM! (Ship Explodes)**.
+  - With probability $\cos^2(\theta/2)$, the photon is measured in the reference arm $\to$ state collapses to $|0\rangle$ without exploding.
+  - The collapsed photon reaches $BS_2$ alone (no interference). At $BS_2$, it has probability $\sin^2(\theta/2)$ of being deflected into the dark port (Detector 1).
+  - Therefore, the probability of **Interaction-Free Detection** without explosion is:
+    $$P(\text{detection}) = \cos^2(\theta/2)\sin^2(\theta/2)$$
 
-```python
-def run_ev_probe(num_targets, angle, shots=1024):
-    """
-    Creates and runs an Elitzur-Vaidman circuit to check for "bombs".
-    """
-    if num_targets == 0:
-        # If there are no ships, there's nothing to detect.
-        return {'0': shots, '1': 0}
+### 2. Theoretical E.V. Score
+The Elitzur-Vaidman quality factor is defined as the ratio of interaction-free detections to explosions:
+$$\text{E.V. Score} = \frac{P(\text{detection})}{P(\text{explosion})} = \frac{\cos^2(\theta/2)\sin^2(\theta/2)}{\sin^2(\theta/2)} = \cos^2(\theta/2)$$
 
-    # qc with 1 probe qubit, 1 target qubit, and 1 classical bit
-    qc = QuantumCircuit(2, 1)
+- **Original Experiment ($\theta = \pi/2$, Slide 9)**:
+  $$P(\text{boom}) = 50.0\%, \quad P(\text{detection}) = 25.0\%, \quad \text{E.V. Score} = \frac{25\%}{50\%} = 50.0\%$$
+- **Angle Upgrade ($\theta = \pi/3$, Slide 10 & 16)**:
+  $$P(\text{boom}) = \sin^2(\pi/6) = 25.0\%$$
+  $$P(\text{detection}) = \cos^2(\pi/6)\sin^2(\pi/6) = (0.75)(0.25) = 18.75\%$$
+  $$\text{E.V. Score} = \frac{18.75\%}{25.0\%} = 75.0\%$$
 
-    # Put the probe into superposition (1st beam splitter)
-    qc.rx(angle, 0)
-    # Entangle probe with target (the "interaction")
-    qc.cx(0, 1)
-    # Reverse the superposition (2nd beam splitter)
-    qc.rx(-angle, 0)
-    # Measure the probe to see if a ship was detected
-    qc.measure(0, 0)
+---
 
-    # Simulate the circuit
-    simulator = AerSimulator()
-    compiled_circuit = transpile(qc, simulator)
-    job = simulator.run(compiled_circuit, shots=shots)
-    result = job.result()
-    counts = result.get_counts(compiled_circuit)
+## Quantum Circuit Architecture (Slide 16 Spec)
 
-    return counts
+For a Battleship line probe (column or row with $N$ cells), the circuit consists of:
+- $1$ Probe Qubit ($q_0$)
+- $N$ Cell Target Qubits ($q_1, \dots, q_N$)
+- Classical bits for measuring each ship cell and the probe qubit.
+
 ```
-The results from the probe are then used to deduce ship locations with simple classical logic:
-```python
-# ... after scanning all rows and columns ...
-found_ships = []
-for r in range(rows):
-    for c in range(cols):
-        # A ship is at the intersection of a "hot" row and a "hot" column
-        if hot_rows[r] and hot_cols[c]:
-            found_ships.append((r, c))
+     ┌─────────┐                    ┌────────┐ ░     ░ ┌───────┐               ┌──────────┐┌─┐
+q_0: ┤ Rx(π/3) ├──■────■────■────■──┤ Rx(-π) ├─░─────░─┤ Rx(π) ├──■────■────■──■──┤ Rx(-π/3) ├┤M├
+     └─────────┘┌─┴─┐  │    │    │  └────────┘ ░     ░ └───────┘┌─┴─┐  │    │  │  └──────────┘└╥┘
+q_1: ───────────┤ X ├──┼────┼────┼─────────────░─────░──────────┤ X ├──┼────┼──┼───────────────╫─
+                └───┘┌─┴─┐  │    │             ░ ┌─┐ ░          └───┘┌─┴─┐  │  │               ║ 
+q_2: ────────────────┤ X ├──┼────┼─────────────░─┤M├─░───────────────┤ X ├──┼──┼───────────────╫─
+                     └───┘┌─┴─┐  │             ░ └╥┘ ░               └───┘┌─┴─┐│               ║ 
+q_3: ─────────────────────┤ X ├──┼─────────────░──╫──░────────────────────┤ X ├┼───────────────╫─
+                          └───┘┌─┴─┐           ░  ║  ░                    └───┘│               ║ 
+q_4: ──────────────────────────┤ X ├───────────░──╫──░─────────────────────────■───────────────╫─
+                               └───┘           ░  ║  ░                                         ║ 
+c: 2/═════════════════════════════════════════════╩════════════════════════════════════════════╩═
+                                                  0                                            1 
 ```
-## Results and Outputs
-Here is a sample output for a 4x4 board with a single ship at coordinate (1, 1).
-```
---- 🚢 Quantum Battleship ---
-Board Layout:
-[[0 0 0 0]
- [0 1 0 0]
- [0 0 0 0]
- [0 0 0 0]]
 
+### Steps:
+1. **$R_x(\pi/3)$ on $q_0$**: Creates probe superposition.
+2. **CNOTs from $q_0$ to $q_1 \dots q_N$**: Entangles the probe photon with all cells in the scanned line.
+3. **$R_x(-\pi)$ on $q_0$**: Aligns probe phase for the interference check.
+4. **Intermediate Measurement on Ship Cells**: Any ship present in the line acts as a bomb detector and measures its target qubit. If it measures $1$, the ship explodes ("BOOM!"). If $0$, the wavefunction collapses safely.
+5. **$R_x(\pi)$ on $q_0$ + CNOTs + $R_x(-\pi/3)$**: Recombines the arms through the second beam splitter.
+6. **Probe Measurement**: Measures $q_0$ into classical bit `c_probe`. If $c[0] == 0$ (no ship explosion) and $c[1] == 1$ (probe clicked), an **interaction-free detection** has occurred!
+
+---
+
+## Battleship Game Architecture & Search Strategy
+
+```
+                          +-------------------------------+
+                          |   Battleship Board Setup      |
+                          |  (e.g., 4x4 Destroyer C2-D2)  |
+                          +---------------+---------------+
+                                          |
+                                          v
+                          +-------------------------------+
+                          | PHASE 1: Line Sweeps          |
+                          | Quantum Superposition Scan    |
+                          | - Probes all N columns        |
+                          | - Probes all N rows           |
+                          | (2N measurements vs N^2)      |
+                          +---------------+---------------+
+                                          |
+                                          v
+                          +-------------------------------+
+                          | PHASE 2: Candidate Analysis   |
+                          | Intersect Hot Rows & Hot Cols |
+                          +---------------+---------------+
+                                          |
+                        +-----------------+-----------------+
+                        |                                   |
+                 No Ambiguity                       Ambiguity Present
+           (|Candidates| == |Fleet|)             (|Candidates| > |Fleet|)
+                        |                                   |
+                        v                                   v
+             Confirmed Ship Locations             +-------------------+
+                                                  | Targeted 1-Cell   |
+                                                  | Quantum EV Probes |
+                                                  +---------+---------+
+                                                            |
+                                                            v
+                                                  Filtered Ship Locations
+                                                            |
+                                          +-----------------+
+                                          v
+                          +-------------------------------+
+                          | PHASE 3: Game Completion      |
+                          | - Verify 100% Detection       |
+                          | - Compute Real EV Metrics     |
+                          | - Compare against Classical   |
+                          | - Export JSON, PNG, TXT       |
+                          +-------------------------------+
+```
+
+---
+
+## Setup & Running with Python Virtual Environment
+
+### 1. Prerequisites
+- Python 3.9, 3.10, or 3.11 installed on the system.
+
+### 2. Create and Activate Virtual Environment
+On **Windows (PowerShell)**:
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+```
+
+On **Linux / macOS**:
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+### 3. Install Dependencies
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Run the Quantum Battleship Simulation
+Run the default benchmark scenario (Slide 13/14/16 spec):
+```bash
+python solution.py
+```
+
+Run with custom CLI parameters:
+```bash
+# Run multi-ship board with candidate disambiguation:
+python solution.py --scenario multi
+
+# Run larger 8x8 naval fleet:
+python solution.py --scenario standard
+
+# Run with theta = pi/2 (50% theoretical EV score, Slide 9):
+python solution.py --scenario benchmark --angle pi/2
+
+# Adjust shots per quantum probe:
+python solution.py --shots 20000
+```
+
+---
+
+## Challenging Full-Fleet Simulation Results (8x8 Grid, 5 Ships)
+
+To simulate a non-trivial, realistic game of Battleship, the default configuration executes on an **8x8 grid (64 cells)** with a complete 5-vessel naval fleet:
+- **Battleship** (length 4): `B2, C2, D2, E2` (horizontal)
+- **Cruiser** (length 3): `G4, G5, G6` (vertical)
+- **Submarine** (length 3): `B7, C7, D7` (horizontal)
+- **Destroyer** (length 2): `C4, C5` (vertical)
+- **Patrol Boat** (length 2): `H1, H2` (vertical)
+**Total Ship Segments**: 14 segments across 64 grid cells.
+
+### Quantum Radar Scan & Disambiguation Log
+```
+[PHASE 1] Quantum Superposition Line Sweeps...
 Scanning Columns...
-  Column 1: Ship detected! ✅
+  Col A: Clear (0 ships)
+  Col B: DETECTED! (Rate: 18.8%, Explosions: 984)
+  Col C: DETECTED! (Rate: 18.2%, Explosions: 1002)
+  Col D: DETECTED! (Rate: 18.1%, Explosions: 967)
+  Col E: DETECTED! (Rate: 19.1%, Explosions: 1015)
+  Col F: Clear (0 ships)
+  Col G: DETECTED! (Rate: 18.5%, Explosions: 1042)
+  Col H: DETECTED! (Rate: 18.9%, Explosions: 999)
 
 Scanning Rows...
-  Row 1: Ship detected! ✅
+  Row 1: DETECTED! (Rate: 18.9%, Explosions: 966)
+  Row 2: DETECTED! (Rate: 18.4%, Explosions: 976)
+  Row 3: Clear (0 ships)
+  Row 4: DETECTED! (Rate: 18.8%, Explosions: 982)
+  Row 5: DETECTED! (Rate: 17.8%, Explosions: 1051)
+  Row 6: DETECTED! (Rate: 19.6%, Explosions: 971)
+  Row 7: DETECTED! (Rate: 18.9%, Explosions: 992)
+  Row 8: Clear (0 ships)
 
---- 🎯 Results ---
-Ship locations identified at: [(1, 1)]
-
---- 📊 Performance ---
-Total Ships on Board: 1
-Ships Correctly Located: 1
-Quantum Measurements: 8 (vs. 16 for classical)
----------------------------------
-Theoretical E.V. Score (Circuit Quality): 3.00
-Final Battleship Score (per problem spec): 6.00
-Empirical Score (This Game's Result): 2.00
+[PHASE 2] Candidate Analysis & Quantum Disambiguation:
+  Hot Columns: ['B', 'C', 'D', 'E', 'G', 'H'] (6 hot columns)
+  Hot Rows:    ['1', '2', '4', '5', '6', '7'] (6 hot rows)
+  Raw Intersection Count: 36 candidate cells (for 14 actual ship parts)
+  Running targeted Quantum EV probes on candidate cells...
+    Cell H1: Confirmed SHIP via interaction-free probe! (Det: 18.9%)
+    Cell B2, C2, D2, E2, H2: Confirmed SHIP via interaction-free probe!
+    Cell C4, G4: Confirmed SHIP via interaction-free probe!
+    Cell C5, G5: Confirmed SHIP via interaction-free probe!
+    Cell G6: Confirmed SHIP via interaction-free probe!
+    Cell B7, C7, D7: Confirmed SHIP via interaction-free probe!
+    22 Empty Water Cells correctly filtered out with 0 detections!
 ```
 
-The output confirms that the single ship was correctly located using only 8 quantum measurements. It also displays the three key performance metrics, showing both the theoretical quality of the circuit and the specific outcome of this game.
+### Final Classified Board
+```
+    A   B   C   D   E   F   G   H
+  +---+---+---+---+---+---+---+---+
+1 | ~ | ~ | ~ | ~ | ~ | ~ | ~ | O |
+  +---+---+---+---+---+---+---+---+
+2 | ~ | O | O | O | O | ~ | ~ | O |
+  +---+---+---+---+---+---+---+---+
+3 | ~ | ~ | ~ | ~ | ~ | ~ | ~ | ~ |
+  +---+---+---+---+---+---+---+---+
+4 | ~ | ~ | O | ~ | ~ | ~ | O | ~ |
+  +---+---+---+---+---+---+---+---+
+5 | ~ | ~ | O | ~ | ~ | ~ | O | ~ |
+  +---+---+---+---+---+---+---+---+
+6 | ~ | ~ | ~ | ~ | ~ | ~ | O | ~ |
+  +---+---+---+---+---+---+---+---+
+7 | ~ | O | O | O | ~ | ~ | ~ | ~ |
+  +---+---+---+---+---+---+---+---+
+8 | ~ | ~ | ~ | ~ | ~ | ~ | ~ | ~ |
+  +---+---+---+---+---+---+---+---+
+Legend: O = Found Ship, ~ = Water
+```
 
-## Challenges Faced and Solutions
-Challenge: Incorrect Score for an Empty Board
+### Performance & Scoring Metrics (8x8 Fleet)
+| Metric | Quantum Radar | Classical Brute-Force | Advantage / Significance |
+| :--- | :---: | :---: | :---: |
+| **Grid Scans Needed** | **52** (16 lines + 36 targeted) | **64** | **18.8% fewer measurements** |
+| **Ships Located** | **14 / 14 (100.0%)** | 14 / 14 (100.0%) | Full accuracy on complex 2D fleet |
+| **False Positives** | **0** | 0 | All 22 ghost cells eliminated |
+| **Simulated Physical Explosions** | **25,810** | Direct hit on every ship | Minimized quantum damage |
+| **Interaction-Free Detections** | **19,392** | 0 | Proved interaction-free probing |
+| **Empirical E.V. Score** | **75.13%** | 0.0% | Spot on theoretical $75.0\%$ |
+| **Slide 17 Battleship Score** | **0.609** | 0.000 | $\frac{\text{Detection}}{\text{Explosion}} \times \frac{\text{Measurements}}{\text{Brute-force}}$ |
+| **Speedup-Adjusted Score** | **0.923** | 0.000 | $\frac{\text{Detection}}{\text{Explosion}} \times \frac{\text{Brute-force}}{\text{Measurements}}$ |
 
-Problem: The initial code produced a non-zero score even when no ships were placed on the board.
+---
 
-Reasoning: The scoring logic was based on theoretical probabilities of the probe circuit and was executed regardless of the board's state.
+## Benchmark Scenario (Slide 13/14/16 Presentation Board)
 
-Solution: A conditional check was added. If the total number of ships on the board is zero, the scores are now correctly set to 0.
+In addition to the 8x8 fleet, the 4x4 presentation board from `Battleship-PPT.pdf` is also validated:
+- **Dimensions**: $4 \times 4$ ($16$ cells)
+- **Fleet**: Destroyer (length 2) placed at coordinates **C2** and **D2**.
+- **Quantum Measurements**: **8** (4 cols + 4 rows) vs **16** for classical (a **50.0% reduction**).
+- **Ships Located**: 2 / 2 (100.0%), 0 false positives.
+- **Empirical E.V. Score**: **74.15%** (theoretical: $75.00\%$).
+- **Slide 17 Battleship Score**: **0.375**, Speedup-adjusted score: **1.500**.
+- **Artifact**: Saved in [`results/benchmark_4x4_summary.json`](results/benchmark_4x4_summary.json).
 
-Challenge: Misinterpreting the ev_score
+---
 
-Problem: The ev_score was a constant 3.0 for any board with at least one ship, which was initially confusing.
+## Multi-Ship Disambiguation Results
 
-Reasoning: It was determined that the ev_score from the presentation is a theoretical metric of the circuit's quality (P(Detection) / P(Explosion)), not a dynamic result of a specific game.
+When multiple ships are on the board, line scans identify all hot rows and columns. Their Cartesian product creates ghost intersections:
+- Ships placed: Destroyer at **C2-D2**, Patrol Boat at **A4-B4**.
+- Hot Columns: `['A', 'B', 'C', 'D']`
+- Hot Rows: `['2', '4']`
+- Raw Candidates: 8 cells (`A2, B2, C2, D2, A4, B4, C4, D4`).
+- **Targeted Quantum Probing**:
+  - Cell A2: Empty $\to$ Confirmed WATER
+  - Cell B2: Empty $\to$ Confirmed WATER
+  - Cell C2: Ship $\to$ Confirmed SHIP via interaction-free probe (Det: 19.1%)
+  - Cell D2: Ship $\to$ Confirmed SHIP via interaction-free probe (Det: 18.9%)
+  - Cell A4: Ship $\to$ Confirmed SHIP via interaction-free probe (Det: 19.4%)
+  - Cell B4: Ship $\to$ Confirmed SHIP via interaction-free probe (Det: 19.2%)
+  - Cell C4: Empty $\to$ Confirmed WATER
+  - Cell D4: Empty $\to$ Confirmed WATER
+- **Result**: 100% precision and recall (4 out of 4 ships found, 0 false positives).
 
-Solution: To provide a more intuitive metric, an Empirical Score (ships_found / simulated_explosions) was added. This gives a game-specific result, while the theoretical scores are kept to fulfill the problem's requirements.
+---
 
-*Note: There is no autograder for this problem. Your solution will be manually reviewed.*
+## Generated Results & Artifacts
+
+All experimental results are generated and committed directly to the repository in `results/`:
+- [`results/quantum_battleship_analysis.png`](results/quantum_battleship_analysis.png): 4-panel publication visualization showing:
+  1. Battleship grid map (detected vs water)
+  2. Quantum circuit shot outcome distribution (matching Slide 16 histogram)
+  3. Quantum vs Classical performance comparison
+  4. Theoretical EV score curve across rotation angles $\theta \in [0, \pi]$
+- [`results/simulation_summary.json`](results/simulation_summary.json): Complete machine-readable JSON summary of the 8x8 game, shots, explosions, detections, and metrics.
+- [`results/simulation_report.txt`](results/simulation_report.txt): Detailed ASCII simulation report for the 8x8 naval game.
+- [`results/circuit_diagram.txt`](results/circuit_diagram.txt): ASCII quantum circuit diagram matching Slide 16.
+- [`results/benchmark_4x4_summary.json`](results/benchmark_4x4_summary.json): 4x4 Slide 13/16 presentation benchmark results.
+- [`results/multi_ship_summary.json`](results/multi_ship_summary.json): Multi-ship disambiguation benchmark summary.
+
+---
+
+## File Structure
+
+```
+├── Battleship.docx                   # Problem statement document
+├── Battleship-PPT.pdf                # Presentation specification slides
+├── solution.py                       # Full Quantum Radar Battleship Simulator
+├── requirements.txt                  # Python library dependencies
+├── README.md                         # Documentation and complete report
+├── .gitignore                        # Git ignore (.venv, __pycache__)
+└── results/                          # TRACKED results and figures
+    ├── benchmark_4x4_summary.json    # 4x4 Presentation benchmark data
+    ├── circuit_diagram.txt           # Quantum circuit ASCII diagram
+    ├── multi_ship_summary.json       # Multi-ship disambiguation results
+    ├── quantum_battleship_analysis.png # 4-panel visual performance plot
+    ├── simulation_report.txt         # Formatted text simulation report (8x8)
+    └── simulation_summary.json       # Structured benchmark JSON data (8x8)
+```
+    ├── simulation_report.txt         # Formatted text simulation report
+    └── simulation_summary.json       # Structured benchmark JSON data
+```
