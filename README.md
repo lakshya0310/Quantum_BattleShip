@@ -335,7 +335,3 @@ All experimental results are generated and committed directly to the repository 
     ├── quantum_battleship_analysis.png # 4-panel visual performance plot
     ├── simulation_report.txt         # Formatted text simulation report (8x8)
     └── simulation_summary.json       # Structured benchmark JSON data (8x8)
-```
-    ├── simulation_report.txt         # Formatted text simulation report
-    └── simulation_summary.json       # Structured benchmark JSON data
-```
