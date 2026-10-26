@@ -8,24 +8,19 @@
 
 ---
 
-## Executive Summary & What Was Fixed
+## Overview
 
-### Previous Limitation
-The previous iteration of the solution only computed theoretical formula values without simulating an actual Battleship game or executing the full quantum physics of the Elitzur-Vaidman bomb tester:
-1. **Incomplete Quantum Circuit**: It used a 2-qubit toy circuit that omitted the intermediate measurement on bomb/ship qubits. Thus, no real wavefunction collapse or physical explosions were simulated.
-2. **Artificial Probability Math**: Explosions were not simulated quantum-mechanically; instead, static mathematical expectations were multiplied.
-3. **No Realistic Battleship Fleet**: Ships were represented as isolated diagonal points (`board[i, i] = 1`) rather than multi-cell naval vessels placed horizontally or vertically.
-4. **Ghost Intersection Failure**: For multiple ships, naive row/column intersections generated false positives ("ghost" ships) without any disambiguation strategy.
+This project implements a quantum solution to the game of **Battleship** based on the **Elitzur-Vaidman (E-V) Interaction-Free Measurement** principle (from `Battleship.docx` and `Battleship-PPT.pdf`, Qiskit Fall Fest 2025).
 
-### The New Solution
-1. **Full Elitzur-Vaidman Circuit Simulation (Slide 9, 10, 16)**: Implements the exact multi-qubit Mach-Zehnder interferometer circuit with real measurement gates on ship qubits (`q_target`) and the probe qubit (`q_probe`), executed on Qiskit AerSimulator with customizable shot counts.
-2. **Actual Physical Simulation**: Every probe shot physically evaluates whether the ship cell collapsed the state ("BOOM!" explosion) or whether the dark port fired without an explosion ("Bomb Found" interaction-free detection).
-3. **Authentic Battleship Gameplay**:
-   - Supports realistic multi-cell ships (Destroyer, Submarine, Cruiser, Patrol Boat) with standard non-overlapping horizontal/vertical placement.
-   - Implements the exact 4x4 benchmark from `Battleship-PPT.pdf` (Slides 13, 14, 16) with a 2-unit Destroyer at coordinates **C2-D2**.
-4. **Quantum Disambiguation Engine**: Solves the classic multi-ship ghost intersection problem using targeted single-cell quantum interaction-free probes, eliminating false positives with 100% precision.
-5. **Direct Classical vs. Quantum Benchmark**: Compares quantum superposition radar against a classical search (which suffers 100% explosion rates on hits and requires up to $N^2$ turns).
-6. **Reproducible Environment & Tracked Results**: Packaged with a Python virtual environment (`.venv`), `requirements.txt`, and tracked experimental results in `results/` (JSON summary, text report, ASCII circuit diagram, and 4-panel publication visualization plot).
+In traditional Battleship, finding a hidden ship requires firing a direct shot, causing an explosion if a ship is hit. Here, we implement a **Quantum Radar** that scans the grid using quantum superposition and interference to detect and locate all enemy ships with minimal chance of hitting them, securing victory before firing a single destructive shot.
+
+### Core Capabilities
+1. **Full Elitzur-Vaidman Quantum Circuit (Slide 9, 10, 16)**: Implements the exact multi-qubit Mach-Zehnder interferometer circuit with physical measurement gates on ship qubits (`q_target`) and the probe qubit (`q_probe`), executed on Qiskit's `AerSimulator`.
+2. **Real Physical Quantum Simulation**: Every shot physically evaluates whether the ship cell collapsed the wavefunction ("BOOM!" explosion) or whether the dark port detector fired without explosion ("Bomb Found" interaction-free detection).
+3. **Full-Fleet Battleship Simulation**: Simulates authentic naval gameplay with multi-cell ships (Battleship, Cruiser, Submarine, Destroyer, Patrol Boat) placed horizontally and vertically without overlapping.
+4. **Quantum Disambiguation Engine**: Solves multi-ship candidate ambiguity ("ghost" intersections) using targeted single-cell quantum EV probes, achieving 100% precision with 0 false positives.
+5. **Direct Classical vs. Quantum Benchmark**: Quantifies quantum advantage against classical brute-force hunt (which requires up to $N^2$ scans and inflicts 100% damage on hits).
+6. **Tracked Results & Visualizations**: Automatically exports complete experimental logs, ASCII circuit diagrams, structured JSON metrics, and 4-panel publication-grade plots to `results/`.
 
 ---
 
@@ -169,24 +164,24 @@ pip install -r requirements.txt
 ```
 
 ### 4. Run the Quantum Battleship Simulation
-Run the default benchmark scenario (Slide 13/14/16 spec):
+Run the simulation (runs the challenging 8x8 full-fleet game by default):
 ```bash
 python solution.py
 ```
 
 Run with custom CLI parameters:
 ```bash
-# Run multi-ship board with candidate disambiguation:
+# Run the 4x4 presentation benchmark scenario (Slide 13/16 spec):
+python solution.py --scenario benchmark
+
+# Run the 4x4 multi-ship disambiguation scenario:
 python solution.py --scenario multi
 
-# Run larger 8x8 naval fleet:
-python solution.py --scenario standard
-
 # Run with theta = pi/2 (50% theoretical EV score, Slide 9):
-python solution.py --scenario benchmark --angle pi/2
+python solution.py --angle pi/2
 
 # Adjust shots per quantum probe:
-python solution.py --shots 20000
+python solution.py --shots 10000
 ```
 
 ---
